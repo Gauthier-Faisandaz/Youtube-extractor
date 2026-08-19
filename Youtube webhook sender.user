@@ -1,0 +1,159 @@
+// ==UserScript==
+// @name         YouTube -> Webhook Sender
+// @namespace    http://tampermonkey.net/
+// @version      7.0
+// @description  Simple floating button to send YouTube video to a webhook.
+// @author       You
+// @match        https://www.youtube.com/*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
+// @connect      *
+// ==/UserScript==
+(function () {
+  'use strict';
+  // Replace with your own n8n webhook URL (same path as the two webhook
+  // nodes in workflow.json: "Start - Request from original userscript"
+  // and "Manual recovery from Notion button").
+  const WEBHOOK_URL = 'https://your-n8n-instance.example.com/webhook/YOUR-WEBHOOK-PATH-UUID';
+  const STORAGE_KEY = 'yt_sent_videos';
+  /* ================================================================
+     STORAGE
+     ================================================================ */
+  function getSentVideos() {
+    try { return JSON.parse(GM_getValue(STORAGE_KEY, '{}')); }
+    catch { return {}; }
+  }
+  function markAsSent(videoId, url, title) {
+    const data = getSentVideos();
+    data[videoId] = { url, title, sentAt: new Date().toISOString() };
+    GM_setValue(STORAGE_KEY, JSON.stringify(data));
+  }
+  function isAlreadySent(videoId) {
+    return videoId ? !!getSentVideos()[videoId] : false;
+  }
+  /* ================================================================
+     HELPERS
+     ================================================================ */
+  function getVideoId() {
+    return new URLSearchParams(window.location.search).get('v') || null;
+  }
+  function getTitle() {
+    return document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim()
+        || document.title.replace(' - YouTube', '').trim()
+        || '';
+  }
+  /* ================================================================
+     BUTTON
+     ================================================================ */
+  let btn = null;
+  function createButton() {
+    document.getElementById('yt-webhook-btn')?.remove();
+    btn = document.createElement('button');
+    btn.id = 'yt-webhook-btn';
+    Object.assign(btn.style, {
+      position:   'fixed',
+      top:        '70px',
+      right:      '18px',
+      zIndex:     '99999',
+      padding:    '9px 16px',
+      borderRadius: '24px',
+      border:     'none',
+      cursor:     'pointer',
+      fontFamily: 'Roboto, Arial, sans-serif',
+      fontSize:   '13px',
+      fontWeight: '600',
+      boxShadow:  '0 2px 8px rgba(0,0,0,0.35)',
+      outline:    'none',
+      minWidth:   '160px',
+      textAlign:  'center',
+      transition: 'background 0.2s, transform 0.1s',
+    });
+    btn.addEventListener('mousedown', () => { btn.style.transform = 'scale(0.95)'; });
+    btn.addEventListener('mouseup',   () => { btn.style.transform = 'scale(1)'; });
+    document.body.appendChild(btn);
+  }
+  const STYLES = {
+    default:  { bg: '#cc0000', color: '#fff', label: 'Send to webhook',              disabled: false },
+    sending:  { bg: '#997700', color: '#fff', label: 'Sending...',                   disabled: true  },
+    sent:     { bg: '#1a7a1a', color: '#fff', label: 'Sent !',                       disabled: false },
+    resend:   { bg: '#1a5a8a', color: '#fff', label: 'Already sent once. Send again?', disabled: false },
+    error:    { bg: '#b94a00', color: '#fff', label: 'Error – retry?',               disabled: false },
+    noVideo:  { bg: '#333333', color: '#888', label: 'No video',                     disabled: true  },
+  };
+  function applyStyle(key) {
+    if (!btn) return;
+    const s = STYLES[key];
+    btn.style.background = s.bg;
+    btn.style.color      = s.color;
+    btn.textContent      = s.label;
+    btn.disabled         = s.disabled;
+  }
+  /* ================================================================
+     SEND
+     ================================================================ */
+  function doSend(videoId, url, title) {
+    applyStyle('sending');
+    btn.onclick = null;
+    GM_xmlhttpRequest({
+      method:  'POST',
+      url:     WEBHOOK_URL,
+      headers: { 'Content-Type': 'application/json' },
+      data:    JSON.stringify({ videoId, url, title, sentAt: new Date().toISOString() }),
+      onload(r) {
+        if (r.status >= 200 && r.status < 300) {
+          markAsSent(videoId, url, title);
+          applyStyle('sent');
+          btn.onclick = () => {
+            applyStyle('resend');
+            btn.onclick = () => doSend(videoId, url, title);
+          };
+        } else {
+          applyStyle('error');
+          btn.onclick = () => doSend(videoId, url, title);
+        }
+      },
+      onerror() {
+        applyStyle('error');
+        btn.onclick = () => doSend(videoId, url, title);
+      },
+    });
+  }
+  /* ================================================================
+     REFRESH
+     ================================================================ */
+  function refreshButton() {
+    if (!btn) return;
+    const videoId = getVideoId();
+    const url     = window.location.href;
+    if (!videoId) {
+      applyStyle('noVideo');
+      btn.onclick = null;
+      return;
+    }
+    if (isAlreadySent(videoId)) {
+      applyStyle('sent');
+      btn.onclick = () => {
+        applyStyle('resend');
+        btn.onclick = () => doSend(videoId, url, getTitle());
+      };
+      return;
+    }
+    applyStyle('default');
+    btn.onclick = () => doSend(videoId, url, getTitle());
+  }
+  function init() {
+    if (!document.body) return;
+    if (!document.getElementById('yt-webhook-btn')) createButton();
+    refreshButton();
+  }
+  let lastUrl = location.href;
+  setInterval(() => {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      setTimeout(refreshButton, 1200);
+    }
+  }, 800);
+  if (document.body) { init(); }
+  else { document.addEventListener('DOMContentLoaded', init); }
+})();

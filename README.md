@@ -2,7 +2,9 @@
 
 n8n workflow that takes a YouTube video URL, pulls its transcript, rewrites it into a clean and structured document via an LLM, and pushes everything into a Notion database — with a built-in recovery path so nothing has to restart from scratch after a partial failure.
 
-![Workflow screenshot](screenshot.png)
+![YouTube page with the "Send to webhook" button injected by the userscript](screenshot.png)
+
+*The red "Send to webhook" button (top-right) is injected on YouTube video pages by the Tampermonkey userscript in [`userscript/`](userscript/) — one click sends the video to the n8n webhook.*
 
 ## What it does
 
@@ -39,7 +41,9 @@ The same webhook path also powers a **manual recovery button** in Notion (`Manua
   - `Transcript processé` (Checkbox)
   - `Log` (Rich text)
 - An n8n **Data Table** named `Youtube_extractor_states` with columns: `video_name`, `video_url`, `video_transcript`, `processed_transcript`, `interest_score`, `logs`, `Notion_page_URL`.
-- A trigger source that `POST`s `{ "title": "...", "url": "..." }` to the webhook — e.g. a browser userscript running on `youtube.com`.
+- A trigger source that `POST`s a video title and URL to the webhook. This repo includes a Tampermonkey userscript ([`userscript/youtube-webhook-sender.user.js`](userscript/youtube-webhook-sender.user.js)) that adds a "Send to webhook" button to every YouTube video page for that purpose.
+
+  Note: the actual workflow trigger reads `body.title` and `body.url` (see the `Save webhook data` and `Normalize video URL` nodes), while the userscript below sends `title`, `url` and `videoId` — adjust either side to match the field names you use.
 
 ## Setup
 
@@ -48,8 +52,9 @@ The same webhook path also powers a **manual recovery button** in Notion (`Manua
 3. Update the Notion `databaseId` and the Data Table `dataTableId` fields to point at your own database/table.
 4. Set your own webhook path on the two webhook nodes (`Start - Request from original userscript` and `Manual recovery from Notion button` — both must share the same path, since the recovery button re-enters through the same entry point).
 5. Add a URL/button property or block in Notion pointing at `https://<your-n8n-host>/webhook/<your-webhook-path>?url=<video url>&page_ID=<notion page id>` for the manual recovery path.
-6. Activate the workflow.
+6. Update `WEBHOOK_URL` in [`userscript/youtube-webhook-sender.user.js`](userscript/youtube-webhook-sender.user.js) to match your webhook, and install it in Tampermonkey (or similar).
+7. Activate the workflow.
 
 ## Notes on this export
 
-The exported JSON has been anonymized before publishing: credential IDs, database/data-table IDs, the webhook path, and an example execution payload (which contained a real IP address and hostname) have been replaced with placeholders. Replace them with your own values as described above.
+The exported JSON and the userscript have been anonymized before publishing: credential IDs, database/data-table IDs, the webhook path/URL, and an example execution payload (which contained a real IP address and hostname) have been replaced with placeholders. Replace them with your own values as described above.
