@@ -1,0 +1,1577 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getTranscript",
+        "videoUrl": "={{ $('Normalize video URL').item.json.video_url }}",
+        "text": true
+      },
+      "type": "n8n-nodes-supadata.supadata",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -608
+      ],
+      "id": "6c96be69-d156-4d2d-a36e-9db73c4c8f99",
+      "name": "Get transcript",
+      "credentials": {
+        "supadataApi": {
+          "id": "YOUR-SUPADATA-CREDENTIAL-ID",
+          "name": "Supadata account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "YOUR-NOTION-DATABASE-ID",
+          "mode": "list",
+          "cachedResultName": "Vidéos",
+          "cachedResultUrl": "https://www.notion.so/YOUR-NOTION-DATABASE-ID"
+        },
+        "title": "={{ $('Start - Request from original userscript').item.json.body.title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "URL|url",
+              "urlValue": "={{ $('Start - Request from original userscript').item.json.body.url }}"
+            },
+            {
+              "key": "Source|select",
+              "selectValue": "Youtube"
+            },
+            {
+              "key": "Status|select",
+              "selectValue": "Pending consultation"
+            }
+          ]
+        },
+        "blockUi": {
+          "blockValues": [
+            {
+              "type": "heading_2",
+              "textContent": "TL;DW"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        -592
+      ],
+      "id": "477e4e39-7e70-470e-8ef1-fea4f9896202",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR-WEBHOOK-PATH-UUID",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1216,
+        -912
+      ],
+      "id": "c7ac7023-dd7a-43fe-8088-b840df96d7d1",
+      "name": "Start - Request from original userscript",
+      "webhookId": "YOUR-WEBHOOK-PATH-UUID"
+    },
+    {
+      "parameters": {
+        "pageId": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+        "markdown": "={{ $('Save processed transcript').item.json.processed_transcript }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-notion-markdown-unified.notionMarkdownUnified",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        -816
+      ],
+      "id": "87f19806-751a-4e8e-92f0-076584cf714b",
+      "name": "Add processed transcript",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pageId": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+        "markdown": "={{ $('Normalize transcript variable').item.json.video_transcript }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-notion-markdown-unified.notionMarkdownUnified",
+      "typeVersion": 1,
+      "position": [
+        3840,
+        -816
+      ],
+      "id": "332a5482-ee60-4df0-b258-e3cd27b672d0",
+      "name": "Add raw transcript",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor_states",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "keyValue": "={{ $('Start - Request from original userscript').item.json.body.title }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "video_name": "={{ $('Start - Request from original userscript').item.json.body.title }}",
+            "video_url": "={{ $('Start - Request from original userscript').item.json.body.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "video_name",
+              "displayName": "video_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "video_url",
+              "displayName": "video_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "video_transcript",
+              "displayName": "video_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processed_transcript",
+              "displayName": "processed_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "interest_score",
+              "displayName": "interest_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "logs",
+              "displayName": "logs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notion_page_URL",
+              "displayName": "Notion_page_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        -912
+      ],
+      "id": "371cb54c-a77d-4327-9491-98abe0c24cb7",
+      "name": "Save webhook data"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor_states",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "condition": "like",
+              "keyValue": "={{ $('Normalize video URL').item.json.video_url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Notion_page_URL": "={{ $('Create a database page').item.json.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "video_name",
+              "displayName": "video_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_url",
+              "displayName": "video_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_transcript",
+              "displayName": "video_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processed_transcript",
+              "displayName": "processed_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "interest_score",
+              "displayName": "interest_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "logs",
+              "displayName": "logs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notion_page_URL",
+              "displayName": "Notion_page_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1024,
+        -592
+      ],
+      "id": "a6473757-b730-4bf2-aba6-70dbad16753d",
+      "name": "Save Notion page URL"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor_states",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "condition": "like",
+              "keyValue": "={{ $('Normalize video URL').item.json.video_url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processed_transcript": "={{ $json.text }}",
+            "logs": "✅ Transcript processed correctly."
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "video_name",
+              "displayName": "video_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_url",
+              "displayName": "video_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_transcript",
+              "displayName": "video_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processed_transcript",
+              "displayName": "processed_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "interest_score",
+              "displayName": "interest_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "logs",
+              "displayName": "logs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notion_page_URL",
+              "displayName": "Notion_page_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2496,
+        -816
+      ],
+      "id": "2e1cd908-5825-4915-90b2-a79de61b4fb9",
+      "name": "Save processed transcript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional editor specialized in converting spoken transcripts into clear, structured written content.\n\nYour task is to transform a raw video transcript into a clean, readable document.\n\nIMPORTANT: This is NOT a summary.\n\nYour objective is to preserve the full informational value of the transcript while making the text significantly more efficient and readable. Keep the original language if french or english; if the transcript is in another language, translate in english. (e.g., if the original transcript is in french, answer in french; if the transcript is in english, answer in english; if the transcript is in spanish, translate in english).\n\n\n# TRANSFORMATION RULES\n\n\n1. Preserve information\n- Keep all meaningful ideas, explanations, arguments, examples, and insights.\n- Do not remove information unless it is clearly verbal noise.\n\n2. Remove spoken-language noise\nDelete or rewrite:\n- filler words (um, uh, you know, like, basically, etc.)\n- repetitions\n- incomplete sentences\n- verbal detours that do not add meaning\n\n3. Rewrite for written clarity\n- Convert spoken phrasing into natural written language\n- Merge fragmented sentences\n- Improve clarity and flow\n- Keep the original meaning exactly\n\n4. Compress intelligently\nYour output should be more compact than the transcript but without losing important ideas.\n\nThink of the output as:\n“a cleaned and compressed transcript”\n\nNOT:\n- a summary\n- a short overview\n- simplified notes\n\nIf information contains meaning, keep it.\n\n5. Structure the content\nUse formatting to improve readability:\n\n- Use headings when the topic changes\n- Use short paragraphs\n- Use bullet points when the speaker lists ideas\n- Maintain logical progression of ideas\n\n6. Do NOT add information\n- Do not invent details\n- Do not interpret beyond the transcript\n- Do not introduce external knowledge\n\nOnly transform the existing text.\n\n\n# OUTPUT STYLE\n\nThe output should read like:\n\nA well-edited article or detailed notes from a talk.\n\nClear.\nDense in information.\nEasy to read.\nIn Markdown.\n\nDO NOT start with a superfluous sentence such as \"Here’s the cleaned and structured version of your transcript, preserving all key information while improving readability and flow:\". Go right to the output.\n\n\n# TRANSCRIPT\n\n{{ $json.video_transcript }}",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2144,
+        -720
+      ],
+      "id": "1a233d8a-9105-49a1-8dc2-c30be8da188b",
+      "name": "Rewrite transcript for readability",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "path": "YOUR-WEBHOOK-PATH-UUID",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -992,
+        -720
+      ],
+      "id": "596ae6b8-2533-499e-b576-9011d7279724",
+      "name": "Manual recovery from Notion button",
+      "webhookId": "YOUR-WEBHOOK-PATH-UUID"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "480fea71-cc95-49f2-a41d-aa9185514a38",
+              "name": "video_url",
+              "value": "={{ $('Start - Request from original userscript').isExecuted ? $('Start - Request from original userscript').item.json.body.url : $('Manual recovery from Notion button').item.json.query.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        -816
+      ],
+      "id": "de808098-25be-4fb7-853a-5cc2d47b34c3",
+      "name": "Normalize video URL"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "YOUR-NOTION-DATABASE-ID",
+          "mode": "list",
+          "cachedResultName": "Vidéos",
+          "cachedResultUrl": "https://www.notion.so/YOUR-NOTION-DATABASE-ID"
+        },
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "URL|url",
+              "condition": "starts_with",
+              "urlValue": "={{ $('Normalize video URL').item.json.video_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        -816
+      ],
+      "id": "a1f13bf6-0edb-46f4-903f-f898faa6384e",
+      "name": "Search the page",
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "condition": "ilike",
+              "keyValue": "={{ $('Normalize video URL').item.json.video_url }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        -784
+      ],
+      "id": "702f569e-5d34-47db-abc1-9064619c24be",
+      "name": "Check temp database for transcript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ab00ee34-97ac-4079-869b-d724ca4c78a0",
+              "leftValue": "={{ $json.video_transcript }}",
+              "rightValue": true,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        -816
+      ],
+      "id": "5586f479-77df-4059-8ffc-4fa71b1b5a54",
+      "name": "Is temp transcript present ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ab00ee34-97ac-4079-869b-d724ca4c78a0",
+              "leftValue": "={{ $('Search the page').item.json.property_transcript_process }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        -976
+      ],
+      "id": "38c87121-7cce-45f5-acc7-796a16e62de5",
+      "name": "Is transcript processed already ?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6e71b2ac-727b-4544-a6bd-e39c9e14ecb7",
+              "name": "video_transcript",
+              "value": "={{ $('Get transcript').isExecuted ? $('Get transcript').item.json.content : $('Check temp database for transcript').item.json.video_transcript }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        -720
+      ],
+      "id": "d86d5635-f6e4-4b98-9423-6aa231d0b7a2",
+      "name": "Normalize transcript variable"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "condition": "like",
+              "keyValue": "={{ $('Normalize video URL').item.json.video_url   }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        -976
+      ],
+      "id": "44504493-ec08-4774-b6a7-fe6c6975ff7b",
+      "name": "Check temp database for processed transcript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ab00ee34-97ac-4079-869b-d724ca4c78a0",
+              "leftValue": "={{ $json.processed_transcript }}",
+              "rightValue": true,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        576,
+        -976
+      ],
+      "id": "c1502c6b-937e-4a5c-8676-631315e02944",
+      "name": "Is temp processed transcript present ?"
+    },
+    {
+      "parameters": {
+        "resource": "block",
+        "blockId": {
+          "__rl": true,
+          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "mode": "id"
+        },
+        "blockUi": {
+          "blockValues": [
+            {
+              "textContent": "="
+            },
+            {
+              "type": "toggle",
+              "textContent": "Transcript"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        3392,
+        -816
+      ],
+      "id": "18c99ee7-a639-442b-bb48-6d1f76a2200f",
+      "name": "Append  transcript header",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR-DATATABLE-ID",
+          "mode": "list",
+          "cachedResultName": "Youtube_extractor_states",
+          "cachedResultUrl": "/projects/YOUR-PROJECT-ID/datatables/YOUR-DATATABLE-ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "video_url",
+              "condition": "like",
+              "keyValue": "={{ $('Normalize video URL').item.json.video_url }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "video_transcript": "={{ $json.content }}",
+            "logs": "✅ Transcript downloaded correctly."
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "video_name",
+              "displayName": "video_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_url",
+              "displayName": "video_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "video_transcript",
+              "displayName": "video_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "processed_transcript",
+              "displayName": "processed_transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "interest_score",
+              "displayName": "interest_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "logs",
+              "displayName": "logs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notion_page_URL",
+              "displayName": "Notion_page_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        -640
+      ],
+      "id": "96a68688-04f4-43fc-a4ce-671a72560cb6",
+      "name": "Save raw transcript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ab00ee34-97ac-4079-869b-d724ca4c78a0",
+              "leftValue": "={{ $json.property_transcript }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        -912
+      ],
+      "id": "50531f1e-a6ff-4ad8-be4c-1b78f194a68c",
+      "name": "Is raw transcript present ?"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2944,
+        -816
+      ],
+      "id": "fc8ef361-f1db-471c-9161-74b7448223c5",
+      "name": "Wait 1s",
+      "webhookId": "YOUR-WAIT-NODE-UUID"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3616,
+        -816
+      ],
+      "id": "cd570f44-fb44-43d3-b846-49cc854dca5b",
+      "name": "Wait 1s again",
+      "webhookId": "YOUR-WAIT-NODE-UUID"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Transcript processé|checkbox",
+              "checkboxValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        3168,
+        -816
+      ],
+      "id": "45b5ff80-142e-48f0-9f39-3a31ef84a0e4",
+      "name": "Check : processed transcript uploaded",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Transcript|checkbox",
+              "checkboxValue": true
+            },
+            {
+              "key": "Log|rich_text",
+              "textContent": "✅ All good."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4080,
+        -864
+      ],
+      "id": "470d7632-3004-4e1f-9285-fb8c1de72abe",
+      "name": "Check : raw transcript uploaded",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Log|rich_text",
+              "textContent": "=🚨 {{ $('Rewrite transcript for readability').item.json.error }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        -624
+      ],
+      "id": "b2923abe-bc00-49af-882e-8a0d9ca4e820",
+      "name": "Log : error in processing transcript",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Log|rich_text",
+              "textContent": "=🚨 Error message when uploading raw transcript : {{ $json.error }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4080,
+        -624
+      ],
+      "id": "7445529b-39ce-43aa-b4b3-7ce62c118fb4",
+      "name": "Log : error uploading raw transcript",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "Error in processing transcript"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2704,
+        -624
+      ],
+      "id": "37ea266f-178f-4974-a8bf-885f7b8b9952",
+      "name": "Error in processing transcript"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Error uploading raw transcript"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        4272,
+        -624
+      ],
+      "id": "28d0c663-2c17-4dd0-a7e9-90aebac128ba",
+      "name": "Error uploading raw transcript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "97e2a76b-b19a-4113-9c21-ceb091ef12f7",
+              "name": "Notion_page_ID",
+              "value": "={{ $('Create a database page').isExecuted ? $('Create a database page').item.json.id : $('Search the page').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1696,
+        -704
+      ],
+      "id": "2e899f50-6b78-44cd-a02a-2ed5788f8b72",
+      "name": "Normalize Notion page ID"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2506",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        -496
+      ],
+      "id": "f238f409-117a-4b91-b4f4-40d7c9748944",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "YOUR-MISTRAL-CREDENTIAL-ID",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen3.6-plus",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        -496
+      ],
+      "id": "55db301c-c296-44c7-b3dd-41316783e815",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR-OPENROUTER-CREDENTIAL-ID",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Get transcript": {
+      "main": [
+        [
+          {
+            "node": "Save raw transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        [
+          {
+            "node": "Save Notion page URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start - Request from original userscript": {
+      "main": [
+        [
+          {
+            "node": "Save webhook data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add processed transcript": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add raw transcript": {
+      "main": [
+        [
+          {
+            "node": "Check : raw transcript uploaded",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log : error uploading raw transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save webhook data": {
+      "main": [
+        [
+          {
+            "node": "Normalize video URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Notion page URL": {
+      "main": [
+        [
+          {
+            "node": "Get transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save processed transcript": {
+      "main": [
+        [
+          {
+            "node": "Add processed transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rewrite transcript for readability": {
+      "main": [
+        [
+          {
+            "node": "Save processed transcript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log : error in processing transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual recovery from Notion button": {
+      "main": [
+        [
+          {
+            "node": "Normalize video URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize video URL": {
+      "main": [
+        [
+          {
+            "node": "Search the page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search the page": {
+      "main": [
+        [
+          {
+            "node": "Is raw transcript present ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check temp database for transcript": {
+      "main": [
+        [
+          {
+            "node": "Is temp transcript present ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is temp transcript present ?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Notion page ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is transcript processed already ?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Check temp database for processed transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize transcript variable": {
+      "main": [
+        [
+          {
+            "node": "Rewrite transcript for readability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check temp database for processed transcript": {
+      "main": [
+        [
+          {
+            "node": "Is temp processed transcript present ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is temp processed transcript present ?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Check temp database for transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append  transcript header": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save raw transcript": {
+      "main": [
+        [
+          {
+            "node": "Normalize Notion page ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is raw transcript present ?": {
+      "main": [
+        [
+          {
+            "node": "Is transcript processed already ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check temp database for transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s": {
+      "main": [
+        [
+          {
+            "node": "Check : processed transcript uploaded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s again": {
+      "main": [
+        [
+          {
+            "node": "Add raw transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check : processed transcript uploaded": {
+      "main": [
+        [
+          {
+            "node": "Append  transcript header",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log : error in processing transcript": {
+      "main": [
+        [
+          {
+            "node": "Error in processing transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log : error uploading raw transcript": {
+      "main": [
+        [
+          {
+            "node": "Error uploading raw transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Notion page ID": {
+      "main": [
+        [
+          {
+            "node": "Normalize transcript variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Rewrite transcript for readability",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Rewrite transcript for readability",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Manual recovery from Notion button": [
+      {
+        "headers": {
+          "host": "your-n8n-instance.example.com",
+          "user-agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64) Gecko/20100101 Firefox",
+          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "accept-language": "fr,fr-FR;q=0.9,en-US;q=0.8,en;q=0.7"
+        },
+        "params": {},
+        "query": {
+          "url": "https://www.youtube.com/watch?v=EXAMPLE_ID",
+          "page_ID": "00000000000000000000000000000000"
+        },
+        "body": {},
+        "webhookUrl": "https://your-n8n-instance.example.com/webhook/YOUR-WEBHOOK-PATH-UUID",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
