@@ -10,17 +10,25 @@ n8n workflow that takes a YouTube video URL, pulls its transcript, rewrites it i
 
 1. **Trigger** — a webhook (`Start - Request from original userscript`) receives a `POST` with a video `title` and `url`, typically fired from a browser userscript running on YouTube.
 2. **State tracking** — the request is immediately saved into an n8n Data Table (`Youtube_extractor_states`) so the run can be resumed later if anything fails downstream.
-3. **Dedup / resume check** — before doing any work, the workflow searches the Notion database for an existing page for that URL, and checks the Data Table for a transcript or processed transcript that may already exist from a previous, interrupted run. It only does the work that's actually missing.
-4. **Notion page creation** — if no page exists yet, a new page is created in the Notion "Vidéos" database with the video title, URL, source (`Youtube`) and status (`Pending consultation`).
-5. **Transcript extraction** — the raw transcript is fetched via [Supadata](https://supadata.ai) and saved both to the Data Table and, later, to Notion.
-6. **LLM rewrite** — the raw transcript is rewritten into a dense, well-structured Markdown document (not a summary — all information is preserved, filler and spoken-language noise removed). The primary model is Mistral Cloud, with an OpenRouter model (Qwen) configured as a fallback.
-7. **Notion upload** — both the processed (readable) transcript and the raw transcript are appended to the Notion page as Markdown blocks, under a collapsible "Transcript" toggle.
+3. **Notion page creation** — the workflow searches the Notion "Vidéos" database for a page with that URL. If none exists, it creates one with the video title, URL, source (`Youtube`) and status (`Pending consultation`).
+4. **State-driven routing** — a `Compute state` node combines the Notion page checkboxes (`Transcript`, `Transcript processé`) with whatever the Data Table already holds for that URL (raw and processed transcripts from earlier, possibly interrupted runs). Every following step is gated on that state, so the workflow only does the work that is actually missing and reuses stored transcripts instead of paying for Supadata or the LLM again.
+5. **Transcript extraction** — only if no raw transcript is stored yet, it is fetched via [Supadata](https://supadata.ai) and saved to the Data Table.
+6. **LLM rewrite** — only if no processed transcript is stored yet, the raw transcript is rewritten into a dense, well-structured Markdown document (not a summary — all information is preserved, filler and spoken-language noise removed). The primary model is Mistral Cloud, with an OpenRouter model (Qwen) configured as a fallback.
+7. **Notion upload** — whichever of the processed (readable) transcript and the raw transcript is missing from the page is appended as Markdown blocks, the raw one under a collapsible "Transcript" toggle. Dollar signs in the raw transcript are escaped first: the raw transcript is a single paragraph, and two `$` in it would otherwise be parsed as an inline equation, which Notion rejects.
 8. **Checkpointing** — after each step, the corresponding Notion checkboxes (`Transcript processé`, `Transcript`) and a `Log` field are updated, so the page itself reflects exactly how far processing got.
 9. **Error handling** — any failure (transcript processing or Notion upload) is logged directly onto the Notion page's `Log` property and stops the execution with an explicit error, instead of failing silently.
 
 ## Recovery path
 
-The same webhook path also powers a **manual recovery button** in Notion (`Manual recovery from Notion button`): a URL button on the page that re-triggers the workflow with the video URL and Notion page ID. Because every step re-checks Notion properties and the Data Table before doing work, re-running the workflow on a page that already has a raw transcript but failed at the LLM step will skip straight to reprocessing — it won't re-fetch the transcript or duplicate the Notion page. This makes the workflow safe to re-run at any point after a partial failure.
+Because routing is driven by the actual state of the Notion page and the Data Table, the workflow is safe to re-run on any video at any point after a partial failure: it won't re-fetch a transcript it already has, won't call the LLM twice, won't duplicate the Notion page and won't append the same transcript twice.
+
+There are three ways to re-run it:
+
+- **Manual recovery button in Notion** (`Manual recovery from Notion button`): a URL button on the page that re-triggers the workflow through the same webhook path with the video URL.
+- **Bulk recovery workflow** ([`recovery-workflow.json`](recovery-workflow.json), `Youtube_extractor_recovery`): reads every row of the Data Table, deduplicates them by URL, checks each video against Notion and calls the main workflow (through its `When called by recovery workflow` trigger) one video at a time for every page that is missing or incomplete. A `Config` node at the start controls it:
+  - `dry_run` (default `true`): only classifies the videos (`complete` / `incomplete` / `missing`) and reports the result in the `Summary` node, without processing anything.
+  - `only_url`: restricts the run to a single URL, handy for testing.
+- **Re-sending the video** from the userscript.
 
 ## Requirements
 
@@ -53,8 +61,9 @@ The same webhook path also powers a **manual recovery button** in Notion (`Manua
 4. Set your own webhook path on the two webhook nodes (`Start - Request from original userscript` and `Manual recovery from Notion button` — both must share the same path, since the recovery button re-enters through the same entry point).
 5. Add a URL/button property or block in Notion pointing at `https://<your-n8n-host>/webhook/<your-webhook-path>?url=<video url>&page_ID=<notion page id>` for the manual recovery path.
 6. Update `WEBHOOK_URL` in [`userscript/youtube-webhook-sender.user.js`](userscript/youtube-webhook-sender.user.js) to match your webhook, and install it in Tampermonkey (or similar).
-7. Activate the workflow.
+7. Activate (publish) the workflow. The recovery workflow calls the published version, so publish again after every change.
+8. Optionally, import [`recovery-workflow.json`](recovery-workflow.json), point its `Process video with Youtube_extractor` node at your imported main workflow, and re-link its Notion credential and Data Table. Run it with `dry_run` set to `true` first.
 
 ## Notes on this export
 
-The exported JSON and the userscript have been anonymized before publishing: credential IDs, database/data-table IDs, the webhook path/URL, and an example execution payload (which contained a real IP address and hostname) have been replaced with placeholders. Replace them with your own values as described above.
+The exported JSON files and the userscript have been anonymized before publishing: credential IDs, database/data-table IDs, the workflow ID referenced by the recovery workflow, the webhook path/URL, and an example execution payload (which contained a real IP address and hostname) have been replaced with placeholders. Replace them with your own values as described above.

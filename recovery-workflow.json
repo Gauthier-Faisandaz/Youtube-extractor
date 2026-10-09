@@ -1,0 +1,441 @@
+{
+  "name": "Youtube_extractor_recovery",
+  "nodes": [
+    {
+      "id": "a3cfe75a-bd9e-4d47-a506-0f01d5d6a24f",
+      "name": "Sticky Note 00dd56f5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -416
+      ],
+      "parameters": {
+        "content": "## Youtube_extractor – recovery\nRattrape toutes les vidéos de la data table `Youtube_extractor_states` :\n1. Dédoublonne les lignes par URL.\n2. Cherche la page correspondante dans la base Notion « Vidéos ».\n3. Si la page manque ou est incomplète (cases `Transcript` / `Transcript processé`), appelle **Youtube_extractor**, qui ne fait que les étapes manquantes et réutilise les transcripts déjà stockés.\n\n**Config**\n- `dry_run` = true : classe les vidéos sans rien traiter (résultat dans « Summary »).\n- `only_url` : limite la recovery à une seule URL (test).",
+        "color": 4,
+        "width": 640,
+        "height": 352
+      }
+    },
+    {
+      "id": "c82f240c-75c0-4456-bd4e-4f6d90174ed9",
+      "name": "Run recovery",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a9e983fb-6fdb-4a1f-9b77-84d22cb05994",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-dry-run",
+              "name": "dry_run",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "cfg-only-url",
+              "name": "only_url",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e3a191ac-357f-4c12-94fd-a2acdf271e27",
+      "name": "Get all temp rows",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR-DATATABLE-ID",
+          "cachedResultName": "Youtube_extractor_states"
+        },
+        "returnAll": true
+      }
+    },
+    {
+      "id": "305c3faa-aba7-4cef-bc94-292eaea73c2f",
+      "name": "Dedupe videos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Une ligne par URL : la data table peut contenir plusieurs lignes pour la même vidéo.\nconst onlyUrl = ($('Config').first().json.only_url || '').trim();\nconst byUrl = new Map();\n\nfor (const { json: row } of $input.all()) {\n  if (!row.video_url) continue;\n  if (onlyUrl && row.video_url !== onlyUrl) continue;\n  const video = byUrl.get(row.video_url) || {\n    url: row.video_url,\n    title: '',\n    row_ids: [],\n    has_raw: false,\n    has_processed: false,\n  };\n  video.title = video.title || row.video_name || '';\n  video.row_ids.push(row.id);\n  video.has_raw = video.has_raw || !!row.video_transcript;\n  video.has_processed = video.has_processed || !!row.processed_transcript;\n  byUrl.set(row.video_url, video);\n}\n\nreturn [...byUrl.values()].map(json => ({ json }));"
+      }
+    },
+    {
+      "id": "979272ee-41c9-4814-a21e-a85e09f9dd37",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -128
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const videos = $input.all().map(item => item.json);\nconst countBy = key => videos.reduce((acc, video) => {\n  acc[video[key]] = (acc[video[key]] || 0) + 1;\n  return acc;\n}, {});\n\nreturn [{\n  json: {\n    dry_run: $('Config').first().json.dry_run,\n    total: videos.length,\n    by_status: countBy('status'),\n    by_action: countBy('action'),\n    to_process: videos.filter(v => v.status !== 'complete').map(v => ({ url: v.url, title: v.title, status: v.status })),\n    failed: videos.filter(v => v.action === 'failed').map(v => ({ url: v.url, title: v.title, error: v.error })),\n  },\n}];"
+      }
+    },
+    {
+      "id": "5438d559-0bf1-4075-833a-425c2840b8d9",
+      "name": "Search Notion page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        112
+      ],
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR-NOTION-DATABASE-ID",
+          "cachedResultName": "Vidéos",
+          "cachedResultUrl": "https://www.notion.so/YOUR-NOTION-DATABASE-ID"
+        },
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "URL|url",
+              "condition": "starts_with",
+              "urlValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "id": "9f9c61e9-15ae-4c41-b881-96d766eec52a",
+      "name": "Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Compare la vidéo de la data table avec sa page Notion.\nconst video = $('Loop over videos').first().json;\nconst page = $input.first().json;\nconst exists = !!page.id;\nconst notionHasRaw = exists && page.property_transcript === true;\nconst notionHasProcessed = exists && page.property_transcript_process === true;\n\nlet status = 'missing';\nif (exists) status = notionHasRaw && notionHasProcessed ? 'complete' : 'incomplete';\n\nreturn [{\n  json: {\n    url: video.url,\n    title: video.title,\n    temp_has_raw: video.has_raw,\n    temp_has_processed: video.has_processed,\n    notion_page_id: page.id || null,\n    notion_has_raw: notionHasRaw,\n    notion_has_processed: notionHasProcessed,\n    status,\n  },\n}];"
+      }
+    },
+    {
+      "id": "7d91d89f-7067-492e-be95-cbcc181c3bba",
+      "name": "Needs processing ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        112
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "needs-processing",
+              "leftValue": "={{ $json.status !== 'complete' && !$('Config').first().json.dry_run }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5a5804cb-7c7a-4540-b4db-ba8711648225",
+      "name": "Process video with Youtube_extractor",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        16
+      ],
+      "parameters": {
+        "mode": "each",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR-YOUTUBE-EXTRACTOR-WORKFLOW-ID",
+          "cachedResultName": "Youtube_extractor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $json.url }}",
+            "title": "={{ $json.title }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "689b601a-273f-4ae2-adc5-2e4b9902e7a3",
+      "name": "Result: processed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        16
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const video = $('Classify').first().json;\nconst result = $input.first().json;\nconst error = result.error ? (result.error.message || String(result.error)) : null;\nreturn [{ json: { ...video, action: error ? 'failed' : 'processed', error } }];"
+      }
+    },
+    {
+      "id": "692fa5d3-ab20-4362-80a8-44bd445fc3d6",
+      "name": "Loop over videos",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "485b4d31-70f4-4659-9765-af4e90abdad3",
+      "name": "Result: no action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        224
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const video = $('Classify').first().json;\nconst dryRun = $('Config').first().json.dry_run;\nlet action = 'skipped (already complete)';\nif (video.status !== 'complete' && dryRun) action = 'dry run';\nreturn [{ json: { ...video, action, error: null } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Run recovery": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get all temp rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all temp rows": {
+      "main": [
+        [
+          {
+            "node": "Dedupe videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedupe videos": {
+      "main": [
+        [
+          {
+            "node": "Loop over videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Notion page": {
+      "main": [
+        [
+          {
+            "node": "Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify": {
+      "main": [
+        [
+          {
+            "node": "Needs processing ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs processing ?": {
+      "main": [
+        [
+          {
+            "node": "Process video with Youtube_extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result: no action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process video with Youtube_extractor": {
+      "main": [
+        [
+          {
+            "node": "Result: processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: processed": {
+      "main": [
+        [
+          {
+            "node": "Loop over videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over videos": {
+      "main": [
+        [
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Notion page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: no action": {
+      "main": [
+        [
+          {
+            "node": "Loop over videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {}
+}
