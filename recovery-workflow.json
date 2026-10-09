@@ -2,73 +2,69 @@
   "name": "Youtube_extractor_recovery",
   "nodes": [
     {
+      "parameters": {
+        "content": "## Youtube_extractor – recovery\nRattrape toutes les vidéos de la data table `Youtube_extractor_states` :\n1. Dédoublonne les lignes par URL.\n2. Cherche la page correspondante dans la base Notion « Vidéos ».\n3. Si la page manque ou est incomplète (cases `Transcript` / `Transcript processé`), appelle **Youtube_extractor**, qui ne fait que les étapes manquantes et réutilise les transcripts déjà stockés.\n4. Supprime les lignes de la data table des vidéos dont la page Notion est **vérifiée complète** (revérification dans Notion après traitement).\n\n**Config**\n- `dry_run` = true : classe les vidéos sans rien traiter ni supprimer ; « Summary » indique les lignes qui seraient supprimées.\n- `only_url` : limite la recovery à une seule URL (test).\n- `cleanup` = false : désactive la suppression des lignes.",
+        "height": 400,
+        "width": 640,
+        "color": 4
+      },
       "id": "a3cfe75a-bd9e-4d47-a506-0f01d5d6a24f",
       "name": "Sticky Note 00dd56f5",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -32,
-        -416
-      ],
-      "parameters": {
-        "content": "## Youtube_extractor – recovery\nRattrape toutes les vidéos de la data table `Youtube_extractor_states` :\n1. Dédoublonne les lignes par URL.\n2. Cherche la page correspondante dans la base Notion « Vidéos ».\n3. Si la page manque ou est incomplète (cases `Transcript` / `Transcript processé`), appelle **Youtube_extractor**, qui ne fait que les étapes manquantes et réutilise les transcripts déjà stockés.\n\n**Config**\n- `dry_run` = true : classe les vidéos sans rien traiter (résultat dans « Summary »).\n- `only_url` : limite la recovery à une seule URL (test).",
-        "color": 4,
-        "width": 640,
-        "height": 352
-      }
+        -464
+      ]
     },
     {
+      "parameters": {},
       "id": "c82f240c-75c0-4456-bd4e-4f6d90174ed9",
       "name": "Run recovery",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
         0,
-        0
-      ],
-      "parameters": {}
+        144
+      ]
     },
     {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-dry-run",
+              "name": "dry_run",
+              "type": "boolean",
+              "value": true
+            },
+            {
+              "id": "cfg-only-url",
+              "name": "only_url",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "cfg-cleanup",
+              "name": "cleanup",
+              "type": "boolean",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      },
       "id": "a9e983fb-6fdb-4a1f-9b77-84d22cb05994",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
         224,
-        0
-      ],
-      "parameters": {
-        "mode": "manual",
-        "assignments": {
-          "assignments": [
-            {
-              "id": "cfg-dry-run",
-              "name": "dry_run",
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "id": "cfg-only-url",
-              "name": "only_url",
-              "value": "",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      }
+        144
+      ]
     },
     {
-      "id": "e3a191ac-357f-4c12-94fd-a2acdf271e27",
-      "name": "Get all temp rows",
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1.1,
-      "position": [
-        448,
-        0
-      ],
       "parameters": {
-        "resource": "row",
         "operation": "get",
         "dataTableId": {
           "__rl": true,
@@ -77,24 +73,33 @@
           "cachedResultName": "Youtube_extractor_states"
         },
         "returnAll": true
-      }
+      },
+      "id": "e3a191ac-357f-4c12-94fd-a2acdf271e27",
+      "name": "Get all temp rows",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        144
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "// Une ligne par URL : la data table peut contenir plusieurs lignes pour la même vidéo.\nconst onlyUrl = ($('Config').first().json.only_url || '').trim();\nconst byUrl = new Map();\n\nfor (const { json: row } of $input.all()) {\n  if (!row.video_url) continue;\n  if (onlyUrl && row.video_url !== onlyUrl) continue;\n  const video = byUrl.get(row.video_url) || {\n    url: row.video_url,\n    title: '',\n    row_ids: [],\n    has_raw: false,\n    has_processed: false,\n  };\n  video.title = video.title || row.video_name || '';\n  video.row_ids.push(row.id);\n  video.has_raw = video.has_raw || !!row.video_transcript;\n  video.has_processed = video.has_processed || !!row.processed_transcript;\n  byUrl.set(row.video_url, video);\n}\n\nreturn [...byUrl.values()].map(json => ({ json }));"
+      },
       "id": "305c3faa-aba7-4cef-bc94-292eaea73c2f",
       "name": "Dedupe videos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         672,
-        0
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "// Une ligne par URL : la data table peut contenir plusieurs lignes pour la même vidéo.\nconst onlyUrl = ($('Config').first().json.only_url || '').trim();\nconst byUrl = new Map();\n\nfor (const { json: row } of $input.all()) {\n  if (!row.video_url) continue;\n  if (onlyUrl && row.video_url !== onlyUrl) continue;\n  const video = byUrl.get(row.video_url) || {\n    url: row.video_url,\n    title: '',\n    row_ids: [],\n    has_raw: false,\n    has_processed: false,\n  };\n  video.title = video.title || row.video_name || '';\n  video.row_ids.push(row.id);\n  video.has_raw = video.has_raw || !!row.video_transcript;\n  video.has_processed = video.has_processed || !!row.processed_transcript;\n  byUrl.set(row.video_url, video);\n}\n\nreturn [...byUrl.values()].map(json => ({ json }));"
-      }
+        144
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "const videos = $input.all().map(item => item.json);\nconst dryRun = $('Config').first().json.dry_run;\nconst countBy = key => videos.reduce((acc, video) => {\n  acc[video[key]] = (acc[video[key]] || 0) + 1;\n  return acc;\n}, {});\nconst cleaned = videos.filter(v => (v.temp_rows_deleted || 0) > 0);\nconst rowCount = cleaned.reduce((sum, v) => sum + v.temp_rows_deleted, 0);\n\nreturn [{\n  json: {\n    dry_run: dryRun,\n    total: videos.length,\n    by_status: countBy('status'),\n    by_action: countBy('action'),\n    temp_rows: {\n      [dryRun ? 'would_delete' : 'deleted']: rowCount,\n      videos: cleaned.length,\n    },\n    to_process: videos.filter(v => v.status !== 'complete').map(v => ({ url: v.url, title: v.title, status: v.status })),\n    failed: videos.filter(v => v.action === 'failed').map(v => ({ url: v.url, title: v.title, error: v.error })),\n  },\n}];"
+      },
       "id": "979272ee-41c9-4814-a21e-a85e09f9dd37",
       "name": "Summary",
       "type": "n8n-nodes-base.code",
@@ -102,22 +107,9 @@
       "position": [
         1120,
         -128
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "const videos = $input.all().map(item => item.json);\nconst countBy = key => videos.reduce((acc, video) => {\n  acc[video[key]] = (acc[video[key]] || 0) + 1;\n  return acc;\n}, {});\n\nreturn [{\n  json: {\n    dry_run: $('Config').first().json.dry_run,\n    total: videos.length,\n    by_status: countBy('status'),\n    by_action: countBy('action'),\n    to_process: videos.filter(v => v.status !== 'complete').map(v => ({ url: v.url, title: v.title, status: v.status })),\n    failed: videos.filter(v => v.action === 'failed').map(v => ({ url: v.url, title: v.title, error: v.error })),\n  },\n}];"
-      }
+      ]
     },
     {
-      "id": "5438d559-0bf1-4075-833a-425c2840b8d9",
-      "name": "Search Notion page",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
-      "position": [
-        1120,
-        112
-      ],
       "parameters": {
         "resource": "databasePage",
         "operation": "getAll",
@@ -141,6 +133,14 @@
         },
         "options": {}
       },
+      "id": "5438d559-0bf1-4075-833a-425c2840b8d9",
+      "name": "Search Notion page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        64
+      ],
       "alwaysOutputData": true,
       "credentials": {
         "notionApi": {
@@ -150,29 +150,19 @@
       }
     },
     {
+      "parameters": {
+        "jsCode": "// Compare la vidéo de la data table avec sa page Notion.\nconst video = $('Loop over videos').first().json;\nconst page = $input.first().json;\nconst exists = !!page.id;\nconst notionHasRaw = exists && page.property_transcript === true;\nconst notionHasProcessed = exists && page.property_transcript_process === true;\n\nlet status = 'missing';\nif (exists) status = notionHasRaw && notionHasProcessed ? 'complete' : 'incomplete';\n\nreturn [{\n  json: {\n    url: video.url,\n    title: video.title,\n    temp_has_raw: video.has_raw,\n    temp_has_processed: video.has_processed,\n    notion_page_id: page.id || null,\n    notion_has_raw: notionHasRaw,\n    notion_has_processed: notionHasProcessed,\n    status,\n  },\n}];"
+      },
       "id": "9f9c61e9-15ae-4c41-b881-96d766eec52a",
       "name": "Classify",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1344,
-        112
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "// Compare la vidéo de la data table avec sa page Notion.\nconst video = $('Loop over videos').first().json;\nconst page = $input.first().json;\nconst exists = !!page.id;\nconst notionHasRaw = exists && page.property_transcript === true;\nconst notionHasProcessed = exists && page.property_transcript_process === true;\n\nlet status = 'missing';\nif (exists) status = notionHasRaw && notionHasProcessed ? 'complete' : 'incomplete';\n\nreturn [{\n  json: {\n    url: video.url,\n    title: video.title,\n    temp_has_raw: video.has_raw,\n    temp_has_processed: video.has_processed,\n    notion_page_id: page.id || null,\n    notion_has_raw: notionHasRaw,\n    notion_has_processed: notionHasProcessed,\n    status,\n  },\n}];"
-      }
+        64
+      ]
     },
     {
-      "id": "7d91d89f-7067-492e-be95-cbcc181c3bba",
-      "name": "Needs processing ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1568,
-        112
-      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -196,20 +186,18 @@
           "combinator": "and"
         },
         "options": {}
-      }
+      },
+      "id": "7d91d89f-7067-492e-be95-cbcc181c3bba",
+      "name": "Needs processing ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        64
+      ]
     },
     {
-      "id": "5a5804cb-7c7a-4540-b4db-ba8711648225",
-      "name": "Process video with Youtube_extractor",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        1792,
-        16
-      ],
       "parameters": {
-        "mode": "each",
-        "source": "database",
         "workflowId": {
           "__rl": true,
           "mode": "list",
@@ -246,54 +234,181 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": true
         },
+        "mode": "each",
         "options": {
           "waitForSubWorkflow": true
         }
       },
+      "id": "5a5804cb-7c7a-4540-b4db-ba8711648225",
+      "name": "Process video with Youtube_extractor",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        -32
+      ],
       "onError": "continueRegularOutput"
     },
     {
+      "parameters": {
+        "jsCode": "// Résultat d'une vidéo envoyée à Youtube_extractor, revérifié dans Notion.\nconst video = $('Classify').first().json;\nconst result = $('Process video with Youtube_extractor').first().json;\nconst page = $input.first().json;\nconst error = result.error ? (result.error.message || String(result.error)) : null;\nconst nowComplete = !!page.id\n  && page.property_transcript === true\n  && page.property_transcript_process === true;\n\nreturn [{ json: { ...video, action: error ? 'failed' : 'processed', error, now_complete: nowComplete } }];"
+      },
       "id": "689b601a-273f-4ae2-adc5-2e4b9902e7a3",
       "name": "Result: processed",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2016,
+        2240,
         16
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "const video = $('Classify').first().json;\nconst result = $input.first().json;\nconst error = result.error ? (result.error.message || String(result.error)) : null;\nreturn [{ json: { ...video, action: error ? 'failed' : 'processed', error } }];"
-      }
+      ]
     },
     {
+      "parameters": {
+        "options": {}
+      },
       "id": "692fa5d3-ab20-4362-80a8-44bd445fc3d6",
       "name": "Loop over videos",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
         896,
-        0
-      ],
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      }
+        144
+      ]
     },
     {
+      "parameters": {
+        "jsCode": "const video = $('Classify').first().json;\nconst dryRun = $('Config').first().json.dry_run;\nlet action = 'skipped (already complete)';\nif (video.status !== 'complete' && dryRun) action = 'dry run';\nreturn [{ json: { ...video, action, error: null } }];"
+      },
       "id": "485b4d31-70f4-4659-9765-af4e90abdad3",
       "name": "Result: no action",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1792,
-        224
+        192
+      ]
+    },
+    {
+      "id": "221fde06-94e1-4d34-b14e-7278506d72f9",
+      "name": "Re-check Notion page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        16
       ],
       "parameters": {
-        "mode": "runOnceForAllItems",
+        "databaseId": {
+          "__rl": true,
+          "cachedResultName": "Vidéos",
+          "cachedResultUrl": "https://www.notion.so/YOUR-NOTION-DATABASE-ID",
+          "mode": "list",
+          "value": "YOUR-NOTION-DATABASE-ID"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "condition": "starts_with",
+              "key": "URL|url",
+              "urlValue": "={{ $('Classify').first().json.url }}"
+            }
+          ]
+        },
+        "limit": 1,
+        "operation": "getAll",
+        "options": {},
+        "resource": "databasePage"
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR-NOTION-CREDENTIAL-ID",
+          "name": "Notion connection"
+        }
+      }
+    },
+    {
+      "id": "6e4f7e20-2cca-4ae5-9bcb-ac95ea192aa6",
+      "name": "Cleanup temp rows ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2464,
+        112
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cleanup-temp-rows",
+              "leftValue": "={{ $('Config').first().json.cleanup && ($json.status === 'complete' || $json.now_complete === true) }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "492c1d10-be90-43a3-875e-dfd064a60f1d",
+      "name": "Delete temp rows",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        16
+      ],
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "cachedResultName": "Youtube_extractor_states",
+          "mode": "list",
+          "value": "YOUR-DATATABLE-ID"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "condition": "eq",
+              "keyName": "video_url",
+              "keyValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "matchType": "allConditions",
+        "operation": "deleteRows",
+        "options": {
+          "dryRun": "={{ $('Config').first().json.dry_run }}"
+        },
+        "resource": "row"
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "69516732-6c6d-41af-8e2f-6cd4637a8932",
+      "name": "Result: cleaned",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        16
+      ],
+      "parameters": {
+        "jsCode": "// Nombre de lignes supprimées (ou qui le seraient, en dry run) pour cette vidéo.\n// En dry run, le node renvoie chaque ligne deux fois (dryRunState before / after) : on ne compte que l'état « before ».\nconst video = $('Cleanup temp rows ?').first().json;\nconst rows = $input.all().filter(item => item.json.id != null && item.json.dryRunState !== 'after');\nreturn [{ json: { ...video, temp_rows_deleted: rows.length } }];",
         "language": "javaScript",
-        "jsCode": "const video = $('Classify').first().json;\nconst dryRun = $('Config').first().json.dry_run;\nlet action = 'skipped (already complete)';\nif (video.status !== 'complete' && dryRun) action = 'dry run';\nreturn [{ json: { ...video, action, error: null } }];"
+        "mode": "runOnceForAllItems"
       }
     }
   ],
@@ -382,28 +497,6 @@
         ]
       ]
     },
-    "Process video with Youtube_extractor": {
-      "main": [
-        [
-          {
-            "node": "Result: processed",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Result: processed": {
-      "main": [
-        [
-          {
-            "node": "Loop over videos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Loop over videos": {
       "main": [
         [
@@ -422,7 +515,80 @@
         ]
       ]
     },
+    "Process video with Youtube_extractor": {
+      "main": [
+        [
+          {
+            "node": "Re-check Notion page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-check Notion page": {
+      "main": [
+        [
+          {
+            "node": "Result: processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: processed": {
+      "main": [
+        [
+          {
+            "node": "Cleanup temp rows ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Result: no action": {
+      "main": [
+        [
+          {
+            "node": "Cleanup temp rows ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleanup temp rows ?": {
+      "main": [
+        [
+          {
+            "node": "Delete temp rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop over videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete temp rows": {
+      "main": [
+        [
+          {
+            "node": "Result: cleaned",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: cleaned": {
       "main": [
         [
           {

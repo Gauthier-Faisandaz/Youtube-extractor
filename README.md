@@ -25,9 +25,10 @@ Because routing is driven by the actual state of the Notion page and the Data Ta
 There are three ways to re-run it:
 
 - **Manual recovery button in Notion** (`Manual recovery from Notion button`): a URL button on the page that re-triggers the workflow through the same webhook path with the video URL.
-- **Bulk recovery workflow** ([`recovery-workflow.json`](recovery-workflow.json), `Youtube_extractor_recovery`): reads every row of the Data Table, deduplicates them by URL, checks each video against Notion and calls the main workflow (through its `When called by recovery workflow` trigger) one video at a time for every page that is missing or incomplete. A `Config` node at the start controls it:
-  - `dry_run` (default `true`): only classifies the videos (`complete` / `incomplete` / `missing`) and reports the result in the `Summary` node, without processing anything.
+- **Bulk recovery workflow** ([`recovery-workflow.json`](recovery-workflow.json), `Youtube_extractor_recovery`): reads every row of the Data Table, deduplicates them by URL, checks each video against Notion and calls the main workflow (through its `When called by recovery workflow` trigger) one video at a time for every page that is missing or incomplete. It then cleans up the Data Table: the rows of a video are deleted once its Notion page is verified complete (both checkboxes ticked). A video processed during the run is checked again in Notion before its rows are deleted, rather than trusting the sub-workflow's success alone. A `Config` node at the start controls it:
+  - `dry_run` (default `true`): only classifies the videos (`complete` / `incomplete` / `missing`) and reports the result in the `Summary` node, including how many Data Table rows would be deleted, without processing or deleting anything.
   - `only_url`: restricts the run to a single URL, handy for testing.
+  - `cleanup` (default `true`): set it to `false` to keep the Data Table rows.
 - **Re-sending the video** from the userscript.
 
 ## Requirements
