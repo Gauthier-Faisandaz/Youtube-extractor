@@ -105,8 +105,8 @@
     },
     {
       "parameters": {
-        "pageId": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
-        "markdown": "={{ $('Save processed transcript').item.json.processed_transcript }}",
+        "pageId": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
+        "markdown": "={{ $('Save processed transcript').first().json.processed_transcript }}",
         "options": {}
       },
       "type": "n8n-nodes-notion-markdown-unified.notionMarkdownUnified",
@@ -126,8 +126,8 @@
     },
     {
       "parameters": {
-        "pageId": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
-        "markdown": "={{ $('Normalize transcript variable').item.json.video_transcript }}",
+        "pageId": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
+        "markdown": "={{ $('Normalize transcript variable').first().json.video_transcript }}",
         "options": {}
       },
       "type": "n8n-nodes-notion-markdown-unified.notionMarkdownUnified",
@@ -161,7 +161,7 @@
           "conditions": [
             {
               "keyName": "video_url",
-              "keyValue": "={{ $('Start - Request from original userscript').item.json.body.title }}"
+              "keyValue": "={{ $('Start - Request from original userscript').item.json.body.url }}"
             }
           ]
         },
@@ -386,7 +386,7 @@
             {
               "keyName": "video_url",
               "condition": "like",
-              "keyValue": "={{ $('Normalize video URL').item.json.video_url }}"
+              "keyValue": "={{ $('Normalize video URL').first().json.video_url }}"
             }
           ]
         },
@@ -771,7 +771,7 @@
         "resource": "block",
         "blockId": {
           "__rl": true,
-          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "value": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
           "mode": "id"
         },
         "blockUi": {
@@ -982,7 +982,7 @@
         "pageId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "value": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
           "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
         },
         "propertiesUi": {
@@ -1016,7 +1016,7 @@
         "operation": "update",
         "pageId": {
           "__rl": true,
-          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "value": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
           "mode": "id"
         },
         "propertiesUi": {
@@ -1054,14 +1054,14 @@
         "operation": "update",
         "pageId": {
           "__rl": true,
-          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "value": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
           "mode": "id"
         },
         "propertiesUi": {
           "propertyValues": [
             {
               "key": "Log|rich_text",
-              "textContent": "=🚨 {{ $('Rewrite transcript for readability').item.json.error }}"
+              "textContent": "=🚨 {{ $json.error }}"
             }
           ]
         },
@@ -1100,7 +1100,7 @@
         "pageId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Normalize Notion page ID').item.json.Notion_page_ID }}",
+          "value": "={{ $('Normalize Notion page ID').first().json.Notion_page_ID }}",
           "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
         },
         "propertiesUi": {
