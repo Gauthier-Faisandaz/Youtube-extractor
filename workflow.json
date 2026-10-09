@@ -1250,6 +1250,22 @@
       ],
       "id": "be1c63a0-074f-4a99-84f1-8359c333e88a",
       "name": "If the page exist"
+    },
+    {
+      "id": "4ebe7afa-eff6-4f58-9f36-eb1cd7b0a11d",
+      "name": "Sticky Note - first() après le LLM",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        -1216
+      ],
+      "parameters": {
+        "color": 5,
+        "content": "### Pourquoi `.first()` et pas `.item` après le LLM\nLes nodes situés après « Rewrite transcript for readability » référencent `Normalize video URL`, `Normalize Notion page ID` et `Normalize transcript variable` avec `.first()` au lieu de `.item`.\n\n`.item` remonte la chaîne `pairedItem` pour retrouver l'item correspondant. Quand Mistral échoue et que le fallback OpenRouter répond, le node LLM ne fournit pas de `pairedItem` : l'expression échoue (*Paired item data … is unavailable*).\n\nLe workflow ne traite qu'une vidéo par exécution, donc `.first()` renvoie toujours le bon item.\n\n⚠️ Si le workflow traite un jour plusieurs vidéos par exécution, il faudra revoir ces références.",
+        "height": 336,
+        "width": 640
+      }
     }
   ],
   "connections": {
