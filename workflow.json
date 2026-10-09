@@ -75,6 +75,20 @@
     },
     {
       "parameters": {
+        "content": "### Todo\nAdd recovery if workflow bugs (save transcript to n8n database, CRON eevery hour or so to check if any exist (make it so its deleted if the upload to notion happened correctly), delete when done.\n",
+        "height": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        -544
+      ],
+      "id": "a451e344-77af-4a72-bc89-6c5bb8d4767d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "YOUR-WEBHOOK-PATH-UUID",
         "options": {}
@@ -124,13 +138,13 @@
       ],
       "id": "332a5482-ee60-4df0-b258-e3cd27b672d0",
       "name": "Add raw transcript",
+      "onError": "continueErrorOutput",
       "credentials": {
         "notionApi": {
           "id": "YOUR-NOTION-CREDENTIAL-ID",
           "name": "Notion connection"
         }
-      },
-      "onError": "continueErrorOutput"
+      }
     },
     {
       "parameters": {
@@ -560,13 +574,13 @@
       "id": "a1f13bf6-0edb-46f4-903f-f898faa6384e",
       "name": "Search the page",
       "alwaysOutputData": true,
+      "onError": "continueErrorOutput",
       "credentials": {
         "notionApi": {
           "id": "YOUR-NOTION-CREDENTIAL-ID",
           "name": "Notion connection"
         }
-      },
-      "onError": "continueErrorOutput"
+      }
     },
     {
       "parameters": {
@@ -1069,6 +1083,17 @@
       }
     },
     {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -1216
+      ],
+      "id": "ec0a9b1e-6072-4cbc-9d8d-a1be7f03d34f",
+      "name": "TODO : recovery with temp processed transcript"
+    },
+    {
       "parameters": {
         "resource": "databasePage",
         "operation": "update",
@@ -1154,7 +1179,7 @@
     },
     {
       "parameters": {
-        "model": "mistral-small-2506",
+        "model": "mistral-medium-latest",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
@@ -1191,20 +1216,43 @@
           "name": "OpenRouter account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "71d5f940-9c4d-488a-ba83-0f68f29685d3",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        -864
+      ],
+      "id": "be1c63a0-074f-4a99-84f1-8359c333e88a",
+      "name": "If the page exist"
     }
   ],
   "connections": {
-    "Get transcript": {
-      "main": [
-        [
-          {
-            "node": "Save raw transcript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Create a database page": {
       "main": [
         [
@@ -1227,29 +1275,22 @@
         ]
       ]
     },
-    "Add processed transcript": {
+    "Get transcript": {
       "main": [
         [
           {
-            "node": "Wait 1s",
+            "node": "Save raw transcript",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add raw transcript": {
+    "Add processed transcript": {
       "main": [
         [
           {
-            "node": "Check : raw transcript uploaded",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log : error uploading raw transcript",
+            "node": "Wait 1s",
             "type": "main",
             "index": 0
           }
@@ -1333,18 +1374,12 @@
       "main": [
         [
           {
-            "node": "Is raw transcript present ?",
+            "node": "If the page exist",
             "type": "main",
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Create a database page",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Check temp database for transcript": {
@@ -1412,7 +1447,13 @@
     },
     "Is temp processed transcript present ?": {
       "main": [
-        [],
+        [
+          {
+            "node": "TODO : recovery with temp processed transcript",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Check temp database for transcript",
@@ -1456,6 +1497,24 @@
         [
           {
             "node": "Check temp database for transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add raw transcript": {
+      "main": [
+        [
+          {
+            "node": "Check : raw transcript uploaded",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log : error uploading raw transcript",
             "type": "main",
             "index": 0
           }
@@ -1546,6 +1605,24 @@
             "node": "Rewrite transcript for readability",
             "type": "ai_languageModel",
             "index": 1
+          }
+        ]
+      ]
+    },
+    "If the page exist": {
+      "main": [
+        [
+          {
+            "node": "Is raw transcript present ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
